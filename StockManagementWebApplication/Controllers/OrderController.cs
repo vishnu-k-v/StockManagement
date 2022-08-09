@@ -188,7 +188,16 @@ namespace StockManagementWebApplication.Controllers
             }
 
             await _context.SaveChangesAsync();
-            return RedirectToAction("MyOrder");
+            if (this.User.IsInRole(RoleEnum.Manager.ToString()))
+            {
+                return RedirectToAction("All");
+
+            }
+            else
+            {
+                return RedirectToAction("MyOrder");
+
+            }
         }
 
 
