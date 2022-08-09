@@ -1,0 +1,66 @@
+﻿@model StockManagementWebApplication.Models.DTO.OrderDTO
+
+
+@{
+    ViewData["Title"] = "Process";
+}
+
+<h1>Process</h1>
+
+<h3>Are you sure you want to Process this?</h3>
+<div>
+    <h4>Item</h4>
+    <hr />
+    <dl class="row">
+        <dt class = "col-sm-2">
+            Order Id
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.OrderId)
+        </dd>
+        <dt class = "col-sm-2">
+            Items
+        </dt>
+        <dd class = "col-sm-10">
+             <table class="table">
+                        <thead>
+                            <tr>
+                                <th>
+                                    Name
+                                </th>
+                               <th>
+                                    Rate
+                                </th>
+                                <th>
+                                    Quantity
+                             </th>
+                              
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var it in Model.Items) {
+                                    <tr>
+                                        <td>
+                                            @Html.DisplayFor(modelItem => it.Name)
+                                        </td>
+                                       <td>
+                                            @Html.DisplayFor(modelItem => it.Rate)
+                                        </td>
+                                        <td>
+                                            @Html.DisplayFor(modelItem => it.Quantity)
+                                        </td>
+                                        
+                                    </tr>
+                            }
+                        </tbody>
+                    </table>
+        </dd>
+       
+    </dl>
+    
+    <form asp-action="Process">
+        <input type="hidden" asp-for="OrderId" />
+        <input type="submit" value="Process" class="btn" /> |
+        <a asp-action="MyOrder">Back to List</a>
+    </form>
+</div>

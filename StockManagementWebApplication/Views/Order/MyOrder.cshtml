@@ -1,0 +1,104 @@
+﻿@using StockManagementWebApplication.Enums
+@model IEnumerable<StockManagementWebApplication.Models.DTO.OrderDTO>
+<h1> Orders</h1>
+    @if (Model.Any())
+{
+    <table class="table table-hover">
+        <thead class="indigo white-text">
+            <tr>
+                <th>
+                    Order Id
+                </th>
+                <th>
+                    Items
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Status)
+                </th>
+                <th>
+                    Date
+                </th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.OrderId)
+                    </td>
+
+                    <td>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        Name
+                                    </th>
+                                    <th>
+                                        Rate
+                                    </th>
+                                    <th>
+                                        Quantity
+                                    </th>
+
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var it in item.Items)
+                                {
+                                    <tr>
+                                        <td>
+                                            @Html.DisplayFor(modelItem => it.Name)
+                                        </td>
+                                        <td>
+                                            @Html.DisplayFor(modelItem => it.Rate)
+                                        </td>
+                                        <td>
+                                            @Html.DisplayFor(modelItem => it.Quantity)
+                                        </td>
+                                        <td>
+                                            @if (this.User.IsInRole(RoleEnum.Customer.ToString()))
+                                            {
+                                                if (item.StatusId == (int)OrderStatusEnum.Processing)
+                                                {
+                                                    <a asp-action="ModifyOrderItem" asp-route-id="@it.Id">Modify</a>
+                                                    <a asp-action="RemoveOrderItem" asp-route-id="@it.Id">Remove</a>
+                                                }
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </td>
+                    <td>
+                        <span class="badge bg-warning text-dark">
+                             @Html.DisplayFor(modelItem => item.Status)
+                        </span>
+                       
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.OrderDate)
+                    </td>
+                    <td>
+
+                        @if (item.StatusId == (int)OrderStatusEnum.Processing)
+                        {
+                            <a class="btn btn-danger" asp-action="Cancel" asp-route-id="@item.OrderId">Cancel Order</a>
+                        }
+                        @if (this.User.IsInRole(RoleEnum.Manager.ToString()))
+                        {
+                            <a class="btn btn-primary" asp-action="Process" asp-route-id="@item.OrderId">Process</a>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}else{
+
+<div> There are no orders</div>
+}
