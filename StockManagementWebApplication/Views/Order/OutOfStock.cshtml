@@ -1,0 +1,10 @@
+﻿@model StockManagementWebApplication.Models.DTO.OutOfStockDTO
+<h1>Sorry !</h1>
+
+@if (Model.AvailableQuantity == 0){
+     <h4>@Model.Name is Out Of Stock</h4>
+        <span>Please Remove The @Model.Name</span>
+}else{
+      <h4> Only @Model.AvailableQuantity @Model.Name are available</h4>
+      <span>Please Modify The @Model.Name quantity</span>
+}

@@ -11,6 +11,10 @@ using System.Security.Claims;
 
 namespace StockManagementWebApplication.Controllers
 {
+    /// <summary>
+    /// Cart Controller 
+    /// Add and Modify Cart
+    /// </summary>
     [Authorize(Roles = "Customer")]
     public class CartController : Controller
     {
@@ -22,7 +26,10 @@ namespace StockManagementWebApplication.Controllers
             _context = context;
         }
 
-        // GET: CartController
+        /// <summary>
+        /// Get carted Items For current user
+        /// </summary>
+        /// <returns></returns>
         public ActionResult Index()
         {
             var userEmasil = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -43,12 +50,17 @@ namespace StockManagementWebApplication.Controllers
                                     }).ToList()
                                 })
                                 .FirstOrDefault();
-           
+
 
             return View(data);
 
         }
 
+        /// <summary>
+        /// Add To Cart View
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         public async Task<IActionResult> Add(int? id)
         {
             if (id == null || _context.Items == null)
@@ -65,7 +77,11 @@ namespace StockManagementWebApplication.Controllers
             return View(item);
         }
 
-
+        /// <summary>
+        /// Add To Cart Submit Action
+        /// </summary>
+        /// <param name="orderItem"></param>
+        /// <returns></returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddToCart(CreateOrderDTO orderItem)
@@ -117,11 +133,72 @@ namespace StockManagementWebApplication.Controllers
 
                 await _context.SaveChangesAsync();
             }
-            return RedirectToAction("Index","Items");
+            return RedirectToAction("Index", "Items");
 
         }
 
+        /// <summary>
+        /// Modify Cart item View
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public async Task<IActionResult> Modify(int? id)
+        {
+            if (id == null || _context.Items == null)
+            {
+                return NotFound();
+            }
 
+            var item = await _context.OrderItems
+                        .Include(a => a.Item).Where(h => h.Id == id)
+                        .Select(s => new ModifyCartDTO()
+                        {
+                            ItemId = s.ItemId,
+                            OrderId = s.OrderId,
+                            Name = s.Item.Name,
+                            OrderItemId = s.Id,
+                            Quantity = s.Quantity,
+                            Rate = s.Item.Rate
+                        })
+                        .FirstOrDefaultAsync();
+            if (item == null)
+            {
+                return NotFound();
+            }
+            return View(item);
+        }
 
+        /// <summary>
+        /// Modify cart Item ,Change Quantity
+        /// </summary>
+        /// <param name="modifyCartDTO"></param>
+        /// <returns></returns>
+        [HttpPost]
+        public async Task<IActionResult> ModifyCart(ModifyCartDTO modifyCartDTO)
+        {
+            var orderItem = await _context.OrderItems.Where(a => a.Id == modifyCartDTO.OrderItemId)
+                            .FirstOrDefaultAsync();
+            if (orderItem == null)
+            {
+                return NotFound();
+            }
+            if (modifyCartDTO.Quantity == 0)
+            {
+                var order = await _context.Orders.FindAsync(orderItem.OrderId);
+                bool hasItems = order.OrderItems.Any(a => a.Id != modifyCartDTO.OrderItemId);
+                if (!hasItems)
+                {
+                    _context.Orders.Remove(order);
+                }
+                _context.Remove(orderItem);
+            }
+            else
+            {
+                orderItem.Quantity = modifyCartDTO.Quantity;
+                orderItem.Rate = modifyCartDTO.Rate;
+            }
+            await _context.SaveChangesAsync();
+            return RedirectToAction("Index");
+        }
     }
 }

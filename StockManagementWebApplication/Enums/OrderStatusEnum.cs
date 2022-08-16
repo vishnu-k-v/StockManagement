@@ -5,6 +5,6 @@
         Carted = 1,
         Processing = 2,
         Cancelled = 3,
-        Deliverd = 4
+        Delivered  = 4
     }
 }

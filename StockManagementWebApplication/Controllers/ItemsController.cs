@@ -14,6 +14,9 @@ using StockManagementWebApplication.Models.Entities;
 
 namespace StockManagementWebApplication.Controllers
 {
+    /// <summary>
+    /// Items Controller
+    /// </summary>
     [Authorize]
     public class ItemsController : Controller
     {

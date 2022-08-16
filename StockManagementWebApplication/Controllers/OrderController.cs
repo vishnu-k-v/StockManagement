@@ -8,6 +8,9 @@ using System.Security.Claims;
 
 namespace StockManagementWebApplication.Controllers
 {
+    /// <summary>
+    /// Control All Order,Cancel and Approve 
+    /// </summary>
     [Authorize]
     public class OrderController : Controller
     {
@@ -16,18 +19,45 @@ namespace StockManagementWebApplication.Controllers
         {
             _context = context;
         }
+
+        /// <summary>
+        /// Order The carted Items
+        /// </summary>
+        /// <param name="OrderId"></param>
+        /// <returns></returns>
         public async Task<IActionResult> Order(int OrderId)
         {
-            var data = _context.Orders.Where(a => a.Id == OrderId).FirstOrDefault();
+            var data = _context.Orders.Where(a => a.Id == OrderId)
+                        .Include(k => k.OrderItems)
+                        .Include("OrderItems.Item")
+                        .FirstOrDefault();
             if (data == null)
             {
                 return NotFound();
             }
+            foreach (var item in data.OrderItems)
+            {
+                if (item.Item.Quantity < item.Quantity)
+                {
+                    var errorData = new OutOfStockDTO()
+                    {
+                        AvailableQuantity = item.Item.Quantity,
+                        Name = item.Item.Name
+                    };
+                    return View("OutOfStock", errorData);
+                }
+                item.Item.Quantity -= item.Quantity;
+            }
+            
             data.Status = (int)OrderStatusEnum.Processing;
             await _context.SaveChangesAsync();
             return RedirectToAction("MyOrder");
         }
 
+        /// <summary>
+        /// List Dopwn All the orders of the logined in customer
+        /// </summary>
+        /// <returns></returns>
         public async Task<IActionResult> MyOrder()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -70,7 +100,11 @@ namespace StockManagementWebApplication.Controllers
             return View(data);
         }
 
-
+        /// <summary>
+        /// return modify order item view
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         public async Task<IActionResult> ModifyOrderItem(int id)
         {
             var data = _context.OrderItems.Where(a => a.Id == id && a.Order.Status == (int)OrderStatusEnum.Processing)
@@ -89,16 +123,33 @@ namespace StockManagementWebApplication.Controllers
             return View(data);
         }
 
+        /// <summary>
+        /// Modify an item in the order
+        /// </summary>
+        /// <param name="item"></param>
+        /// <returns></returns>
         [HttpPost]
         public async Task<IActionResult> ModifyOrderItem(OrderItemDTO item)
         {
             var data = await _context.OrderItems.Where(a => a.Id == item.Id)
-                        .FirstOrDefaultAsync();
+                            .Include(j => j.Item)
+                            .FirstOrDefaultAsync();
             if (data == null)
             {
                 return NotFound();
             }
+            data.Item.Quantity += data.Quantity;
+            if (data.Item.Quantity < item.Quantity)
+            {
+                var errorData = new OutOfStockDTO()
+                {
+                    AvailableQuantity = data.Item.Quantity,
+                    Name = data.Item.Name
+                };
+                return View("OutOfStock", errorData); 
+            }
             data.Quantity = item.Quantity;
+            data.Item.Quantity -= item.Quantity;
             await _context.SaveChangesAsync();
             return RedirectToAction("MyOrder");
 
@@ -132,9 +183,11 @@ namespace StockManagementWebApplication.Controllers
             {
                 return Problem("Entity set 'StockManagementDbContext.Items'  is null.");
             }
-            var item = await _context.OrderItems.FindAsync(id);
+            var item = await _context.OrderItems.Where(h => h.Id == id)
+                            .Include(a => a.Item).FirstOrDefaultAsync();
             if (item != null)
             {
+                item.Item.Quantity += item.Quantity;
                 _context.OrderItems.Remove(item);
                 var order = await _context.Orders.FindAsync(item.OrderId);
                 bool hasItems = order.OrderItems.Any(a => a.Id != id);
@@ -151,7 +204,7 @@ namespace StockManagementWebApplication.Controllers
 
         public async Task<IActionResult> Cancel(int id)
         {
-            var data = _context.Orders.Where(a => a.Id == id&& a.Status == (int)OrderStatusEnum.Processing)
+            var data = _context.Orders.Where(a => a.Id == id && a.Status == (int)OrderStatusEnum.Processing)
                 .Select(a => new OrderDTO()
                 {
                     OrderId = a.Id,
@@ -181,9 +234,16 @@ namespace StockManagementWebApplication.Controllers
             {
                 return Problem("Entity set 'StockManagementDbContext.Items'  is null.");
             }
-            var item = await _context.Orders.FindAsync(id);
+            var item = _context.Orders.Where(a => a.Id == id)
+                        .Include(k => k.OrderItems)
+                        .Include("OrderItems.Item")
+                        .FirstOrDefault();
             if (item != null)
             {
+                foreach (var it in item.OrderItems)
+                {
+                    it.Item.Quantity += it.Quantity;
+                }
                 item.Status = (int)OrderStatusEnum.Cancelled;
             }
 
@@ -202,7 +262,13 @@ namespace StockManagementWebApplication.Controllers
 
 
 
+        /// <summary>
+        /// get All Orders For Manager
+        /// </summary>
+        /// <returns></returns>
+        /// 
 
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> All()
         {
             var data = _context.Orders.Where(a => a.Status == (int)OrderStatusEnum.Processing)
@@ -239,6 +305,13 @@ namespace StockManagementWebApplication.Controllers
             return View("MyOrder", data);
         }
 
+        /// <summary>
+        /// return process confirmation page
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        /// 
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> Process(int id)
         {
             var data = _context.Orders.Where(a => a.Id == id)
@@ -261,8 +334,13 @@ namespace StockManagementWebApplication.Controllers
             return View(data);
         }
 
-
+        /// <summary>
+        /// Make it as deliverd order by manager
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         [HttpPost, ActionName("Process")]
+        [Authorize(Roles = "Manager")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ProcessConfirmed(int id)
         {
@@ -273,7 +351,7 @@ namespace StockManagementWebApplication.Controllers
             var item = await _context.Orders.FindAsync(id);
             if (item != null)
             {
-                item.Status = (int)OrderStatusEnum.Deliverd;
+                item.Status = (int)OrderStatusEnum.Delivered ;
             }
 
             await _context.SaveChangesAsync();

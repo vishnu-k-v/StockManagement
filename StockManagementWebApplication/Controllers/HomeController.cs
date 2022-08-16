@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StockManagementWebApplication.Data;
+using StockManagementWebApplication.Enums;
 using StockManagementWebApplication.Models;
 using System.Diagnostics;
+using System.Security.Claims;
 
 namespace StockManagementWebApplication.Controllers
 {
@@ -17,8 +19,19 @@ namespace StockManagementWebApplication.Controllers
             _stockManagementDbContext = stockManagementDbContext;
         }
 
+        /// <summary>
+        /// Home Page For Every User
+        /// </summary>
+        /// <returns></returns>
         public IActionResult Index()
         {
+            var userRoles = User.Claims.Where(a => a.Type == ClaimTypes.Role)
+                            .Select(a => a.Value).ToList();
+            if (userRoles.Contains(RoleEnum.Manager.ToString()))
+            {
+                return RedirectToAction("All", "Order");
+            }
+
             var tenDaysBefore = DateTime.Now.AddDays(-10);
             var data = _stockManagementDbContext.OrderItems
                         .Include(i => i.Item)
